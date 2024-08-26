@@ -11,7 +11,17 @@ Default user is `exporter` and password is `changeme`. Use `-authuser` and `-aut
 
 ## Preview
 
-TODO
+Example Grafana dashboard ([exported here](grafana.json))
+
+![preview.png](preview.png)
+
+## Metrics
+
+* CO2 (`aranet4_co2_ppm`)
+* Temperature (`aranet4_temperature_c`)
+* Pressure (`aranet4_pressure_hpa`)
+* Humidity (`aranet4_humidity_percent`)
+* Battery (`aranet4_battery_percent`)
 
 ## License
 
