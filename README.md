@@ -2,11 +2,11 @@
 
 A Prometheus exporter for Aranet4.
 
-## Preview
+## Example
 
 Example Grafana dashboard ([exported here](grafana.json))
 
-![preview.png](preview.png)
+![example.png](example.png)
 
 ## Usage
 
