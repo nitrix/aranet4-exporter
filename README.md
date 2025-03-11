@@ -13,7 +13,7 @@ Example Grafana dashboard ([exported here](grafana.json))
 * Build using Go (`go build .`)
 * Run and specify the device `./aranet4-exporter -addr 11:22:33:44:55:66`
 
-Default user is `exporter` and password is `changeme`. Use `-authuser` and `-authpass` to customize.
+Use `-authuser` and `-authpass` to add basic authentication on the `/metrics` endpoint.
 
 ## Metrics
 

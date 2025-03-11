@@ -74,7 +74,7 @@ func handleMetrics(w http.ResponseWriter, r *http.Request) {
 
 	defer aranet4.Disconnect()
 
-	currentReading, err := aranet4.CurrentReading(true)
+	currentReading, err := aranet4.CurrentReading(false)
 	if err != nil {
 		log.Printf("could not read current reading: %+v", err)
 		emitError(w, "current_reading", err)
