@@ -8,8 +8,11 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"sync"
+	"time"
 )
 
+var aranet4 Aranet4
 var addr string
 var authUser string
 var authPass string
@@ -56,25 +59,15 @@ func emitMetricSuccessfully(w io.Writer, cr CurrentReading) {
 	emitMetricRow(w, "aranet4_humidity_percent", cr.Humidity)
 }
 
-func handleMetrics(w http.ResponseWriter, r *http.Request) {
-	a := NewAranet4()
-	err := a.Connect(addr)
-	if err != nil {
-		emitError(w, "connect", err)
-		return
-	}
+var mutex sync.Mutex
 
-	currentReading, err := a.CurrentReading(true)
+func handleMetrics(w http.ResponseWriter, r *http.Request) {
+	mutex.Lock()
+	defer mutex.Unlock()
+
+	currentReading, err := aranet4.CurrentReading(true)
 	if err != nil {
 		emitError(w, "current_reading", err)
-		return
-	}
-
-	fmt.Printf("Current reading: %+#v\n", currentReading)
-
-	err = a.Disconnect()
-	if err != nil {
-		emitError(w, "disconnect", err)
 		return
 	}
 
@@ -115,17 +108,26 @@ func main() {
 		return
 	}
 
+	aranet4 = NewAranet4()
+	err := aranet4.Connect(addr)
+	if err != nil {
+		log.Fatalf("could not connect to device: %+v", err)
+	}
+
+	defer aranet4.Disconnect()
+
 	http.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, "OK\n")
 	})
 
+	handler := http.HandlerFunc(handleMetrics)
 	if authUser != "" && authPass != "" {
-		http.Handle("/metrics", basicAuth(handleMetrics))
-	} else {
-		http.HandleFunc("/metrics", handleMetrics)
+		handler = http.HandlerFunc(basicAuth(handleMetrics))
 	}
 
-	err := http.ListenAndServe(":8080", nil)
+	http.Handle("/metrics", http.TimeoutHandler(handler, 10*time.Second, "timed out"))
+
+	err = http.ListenAndServe(":8080", nil)
 	if err != nil {
 		log.Fatalf("could not start http server: %+v", err)
 	}
