@@ -149,6 +149,8 @@ func (a *Aranet4) Connect(strAddr string) error {
 }
 
 func (a *Aranet4) CurrentReading(full bool) (CurrentReading, error) {
+	fmt.Println("Reading...")
+
 	var buffer [512]byte
 
 	var c bluetooth.DeviceCharacteristic
@@ -168,7 +170,7 @@ func (a *Aranet4) CurrentReading(full bool) (CurrentReading, error) {
 		return CurrentReading{}, fmt.Errorf("unexpected data length: %d", n)
 	}
 
-	// fmt.Println("=> Read:", n, buffer[0:n])
+	fmt.Println("=> Read:", n, buffer[0:n])
 
 	co2 := int(binary.LittleEndian.Uint16(buffer[0:2]))
 	temperature := float64(binary.LittleEndian.Uint16(buffer[2:4])) / 20
