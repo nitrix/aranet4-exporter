@@ -98,6 +98,8 @@ func basicAuth(next http.HandlerFunc) http.HandlerFunc {
 }
 
 func main() {
+	log.Printf("Starting up...")
+
 	flag.StringVar(&addr, "addr", "", "aranet4 device address")
 	flag.StringVar(&authUser, "authuser", "", "username for basic auth")
 	flag.StringVar(&authPass, "authpass", "", "password for basic auth")
@@ -108,6 +110,8 @@ func main() {
 		return
 	}
 
+	log.Printf("Connecting...")
+
 	aranet4 = NewAranet4()
 	err := aranet4.Connect(addr)
 	if err != nil {
@@ -115,6 +119,8 @@ func main() {
 	}
 
 	defer aranet4.Disconnect()
+
+	log.Printf("Connected")
 
 	http.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, "OK\n")
@@ -126,6 +132,8 @@ func main() {
 	}
 
 	http.Handle("/metrics", http.TimeoutHandler(handler, 10*time.Second, "timed out"))
+
+	log.Printf("Listening on :8080")
 
 	err = http.ListenAndServe(":8080", nil)
 	if err != nil {
