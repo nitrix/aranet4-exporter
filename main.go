@@ -106,8 +106,8 @@ func basicAuth(next http.HandlerFunc) http.HandlerFunc {
 
 func main() {
 	flag.StringVar(&addr, "addr", "", "aranet4 device address")
-	flag.StringVar(&authUser, "authuser", "exporter", "username for basic auth")
-	flag.StringVar(&authPass, "authpass", "changeme", "password for basic auth")
+	flag.StringVar(&authUser, "authuser", "", "username for basic auth")
+	flag.StringVar(&authPass, "authpass", "", "password for basic auth")
 	flag.Parse()
 
 	if addr == "" {
@@ -115,7 +115,11 @@ func main() {
 		return
 	}
 
-	http.Handle("/metrics", basicAuth(handleMetrics))
+	if authUser != "" && authPass != "" {
+		http.Handle("/metrics", basicAuth(handleMetrics))
+	} else {
+		http.HandleFunc("/metrics", handleMetrics)
+	}
 
 	err := http.ListenAndServe(":8080", nil)
 	if err != nil {
