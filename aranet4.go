@@ -74,11 +74,16 @@ func (a *Aranet4) Connect(strAddr string) error {
 			return
 		}
 
-		defer wg.Done()
+		wg.Done()
 
+	retryDiscoverServices:
 		services, err := device.DiscoverServices([]bluetooth.UUID{
 			mustUuidFromString(uuidService),
 		})
+		if strings.Contains(err.Error(), "timeout on DiscoverServices") {
+			time.Sleep(1 * time.Second)
+			goto retryDiscoverServices
+		}
 		if err != nil {
 			innerErr = err
 			return
