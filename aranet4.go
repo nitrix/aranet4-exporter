@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/binary"
 	"fmt"
+	"log"
 	"strings"
 	"sync"
 
@@ -55,6 +56,8 @@ func NewAranet4() Aranet4 {
 }
 
 func (a *Aranet4) Connect(strAddr string) error {
+	log.Println("Enabling...")
+
 	err := a.adapter.Enable()
 	if err != nil {
 		return err
@@ -69,11 +72,15 @@ func (a *Aranet4) Connect(strAddr string) error {
 	var innerErr error
 
 	a.adapter.SetConnectHandler(func(device bluetooth.Device, connected bool) {
+		log.Println("Connected:", connected)
+
 		if !connected {
 			return
 		}
 
-		wg.Done()
+		defer wg.Done()
+
+		log.Println("Discovering services...")
 
 		services, err := device.DiscoverServices([]bluetooth.UUID{
 			mustUuidFromString(uuidService),
@@ -85,6 +92,8 @@ func (a *Aranet4) Connect(strAddr string) error {
 
 		for _, service := range services {
 			if service.UUID().String() == uuidService {
+				log.Println("Discovering characteristics...")
+
 				characteristics, err := service.DiscoverCharacteristics([]bluetooth.UUID{
 					mustUuidFromString(uuidCurrentReadingSimple),
 					mustUuidFromString(uuidCurrentReadingFull),
@@ -103,6 +112,8 @@ func (a *Aranet4) Connect(strAddr string) error {
 					}
 				}
 
+				log.Println("Good to go")
+
 				return
 			}
 		}
@@ -111,6 +122,7 @@ func (a *Aranet4) Connect(strAddr string) error {
 	// Following the Apple accessory design guidelines, picking a connection latency of around 500ms that is a multiple
 	// of 15ms (and giving the device 15ms of space). Apparently, Android 13 phone picks 510ms as the connection
 	// interval with these parameters.
+	log.Println("Connecting...")
 	device, err := a.adapter.Connect(address, bluetooth.ConnectionParams{
 		// ConnectionTimeout: bluetooth.NewDuration(10 * time.Second),
 		// MinInterval:       bluetooth.NewDuration(495 * time.Millisecond),
@@ -122,6 +134,7 @@ func (a *Aranet4) Connect(strAddr string) error {
 		return err
 	}
 
+	log.Println("Waiting...")
 	wg.Wait()
 
 	if innerErr != nil {
@@ -129,6 +142,8 @@ func (a *Aranet4) Connect(strAddr string) error {
 	}
 
 	a.device = &device
+
+	log.Println("CONNECTED!")
 
 	return nil
 }

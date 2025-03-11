@@ -65,8 +65,6 @@ func handleMetrics(w http.ResponseWriter, r *http.Request) {
 	mutex.Lock()
 	defer mutex.Unlock()
 
-	log.Println("Connecting...")
-
 	aranet4 = NewAranet4()
 	err := aranet4.Connect(addr)
 	if err != nil {
@@ -76,15 +74,11 @@ func handleMetrics(w http.ResponseWriter, r *http.Request) {
 
 	defer aranet4.Disconnect()
 
-	log.Println("Reading...")
-
 	currentReading, err := aranet4.CurrentReading(true)
 	if err != nil {
 		emitError(w, "current_reading", err)
 		return
 	}
-
-	log.Println("Done")
 
 	emitMetricSuccessfully(w, currentReading)
 }
