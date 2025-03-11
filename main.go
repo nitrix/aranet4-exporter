@@ -8,7 +8,6 @@ import (
 	"io"
 	"log"
 	"net/http"
-	"time"
 )
 
 var addr string
@@ -21,11 +20,11 @@ func emitError(w http.ResponseWriter, name string, reason error) {
 	fmt.Fprintf(w, "aranet4_error{name=%q, reason=%q} 1\n", name, reason)
 }
 
-func emitMetricRow(w io.Writer, name string, value interface{}, ts time.Time) {
-	fmt.Fprintf(w, "%s %v %d\n", name, value, ts.UnixMilli())
+func emitMetricRow(w io.Writer, name string, value interface{}) {
+	fmt.Fprintf(w, "%s %v\n", name, value)
 }
 
-func emitMetrics(w io.Writer, ds []Data) {
+func emitMetricSuccessfully(w io.Writer, cr CurrentReading) {
 	// Success.
 	fmt.Fprintf(w, "# HELP aranet4_success Aranet4 success\n")
 	fmt.Fprintf(w, "# TYPE aranet4_success counter\n")
@@ -34,55 +33,52 @@ func emitMetrics(w io.Writer, ds []Data) {
 	// Temperature.
 	fmt.Fprintf(w, "# HELP aranet4_temperature_c Temperature in Celsius\n")
 	fmt.Fprintf(w, "# TYPE aranet4_temperature_c gauge\n")
-	for _, d := range ds {
-		emitMetricRow(w, "aranet4_temperature_c", d.T, d.Time)
-	}
+	emitMetricRow(w, "aranet4_temperature_c", cr.Temperature)
 
 	// CO2.
 	fmt.Fprintf(w, "# HELP aranet4_co2_ppm CO2 in ppm\n")
 	fmt.Fprintf(w, "# TYPE aranet4_co2_ppm gauge\n")
-	for _, d := range ds {
-		emitMetricRow(w, "aranet4_co2_ppm", d.CO2, d.Time)
-	}
+	emitMetricRow(w, "aranet4_co2_ppm", cr.CO2)
 
 	// Battery.
 	fmt.Fprintf(w, "# HELP aranet4_battery_percent Battery level in percent\n")
 	fmt.Fprintf(w, "# TYPE aranet4_battery_percent gauge\n")
-	for _, d := range ds {
-		emitMetricRow(w, "aranet4_battery_percent", d.Battery, d.Time)
-	}
+	emitMetricRow(w, "aranet4_battery_percent", cr.Battery)
 
 	// Pressure.
 	fmt.Fprintf(w, "# HELP aranet4_pressure_hpa Pressure in hPa\n")
 	fmt.Fprintf(w, "# TYPE aranet4_pressure_hpa gauge\n")
-	for _, d := range ds {
-		emitMetricRow(w, "aranet4_pressure_hpa", d.P, d.Time)
-	}
+	emitMetricRow(w, "aranet4_pressure_hpa", cr.Pressure)
 
 	// Humidity.
 	fmt.Fprintf(w, "# HELP aranet4_humidity_percent Humidity in percent\n")
 	fmt.Fprintf(w, "# TYPE aranet4_humidity_percent gauge\n")
-	for _, d := range ds {
-		emitMetricRow(w, "aranet4_humidity_percent", d.H, d.Time)
-	}
+	emitMetricRow(w, "aranet4_humidity_percent", cr.Humidity)
 }
 
 func handleMetrics(w http.ResponseWriter, r *http.Request) {
-	dev, err := NewDevice(r.Context(), addr)
+	a := NewAranet4()
+	err := a.Connect(addr)
 	if err != nil {
-		emitError(w, "new_device", err)
-		log.Printf("could not create aranet4 client: %v", err)
+		emitError(w, "connect", err)
 		return
 	}
-	defer dev.Close()
 
-	ds, err := dev.Read()
+	currentReading, err := a.CurrentReading(true)
 	if err != nil {
-		emitError(w, "read", err)
-		log.Printf("could not read device data: %v", err)
+		emitError(w, "current_reading", err)
+		return
 	}
 
-	emitMetrics(w, []Data{ds})
+	fmt.Printf("Current reading: %+#v\n", currentReading)
+
+	err = a.Disconnect()
+	if err != nil {
+		emitError(w, "disconnect", err)
+		return
+	}
+
+	emitMetricSuccessfully(w, currentReading)
 }
 
 func basicAuth(next http.HandlerFunc) http.HandlerFunc {
@@ -121,7 +117,7 @@ func main() {
 
 	http.Handle("/metrics", basicAuth(handleMetrics))
 
-	err := http.ListenAndServe(":9963", nil)
+	err := http.ListenAndServe(":8080", nil)
 	if err != nil {
 		log.Fatalf("could not start http server: %+v", err)
 	}
