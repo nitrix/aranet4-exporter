@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"strings"
 	"sync"
-	"time"
 
 	"tinygo.org/x/bluetooth"
 )
@@ -76,14 +75,9 @@ func (a *Aranet4) Connect(strAddr string) error {
 
 		wg.Done()
 
-	retryDiscoverServices:
 		services, err := device.DiscoverServices([]bluetooth.UUID{
 			mustUuidFromString(uuidService),
 		})
-		if strings.Contains(err.Error(), "timeout on DiscoverServices") {
-			time.Sleep(1 * time.Second)
-			goto retryDiscoverServices
-		}
 		if err != nil {
 			innerErr = err
 			return
@@ -118,10 +112,10 @@ func (a *Aranet4) Connect(strAddr string) error {
 	// of 15ms (and giving the device 15ms of space). Apparently, Android 13 phone picks 510ms as the connection
 	// interval with these parameters.
 	device, err := a.adapter.Connect(address, bluetooth.ConnectionParams{
-		ConnectionTimeout: bluetooth.NewDuration(10 * time.Second),
-		MinInterval:       bluetooth.NewDuration(495 * time.Millisecond),
-		MaxInterval:       bluetooth.NewDuration(510 * time.Millisecond),
-		Timeout:           bluetooth.NewDuration(5 * time.Second),
+		// ConnectionTimeout: bluetooth.NewDuration(10 * time.Second),
+		// MinInterval:       bluetooth.NewDuration(495 * time.Millisecond),
+		// MaxInterval:       bluetooth.NewDuration(510 * time.Millisecond),
+		// Timeout:           bluetooth.NewDuration(5 * time.Second),
 	})
 
 	if err != nil {
