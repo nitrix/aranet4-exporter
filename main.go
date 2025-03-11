@@ -65,11 +65,26 @@ func handleMetrics(w http.ResponseWriter, r *http.Request) {
 	mutex.Lock()
 	defer mutex.Unlock()
 
+	log.Println("Connecting...")
+
+	aranet4 = NewAranet4()
+	err := aranet4.Connect(addr)
+	if err != nil {
+		log.Printf("could not connect to device: %+v", err)
+		return
+	}
+
+	defer aranet4.Disconnect()
+
+	log.Println("Reading...")
+
 	currentReading, err := aranet4.CurrentReading(true)
 	if err != nil {
 		emitError(w, "current_reading", err)
 		return
 	}
+
+	log.Println("Done")
 
 	emitMetricSuccessfully(w, currentReading)
 }
@@ -98,8 +113,6 @@ func basicAuth(next http.HandlerFunc) http.HandlerFunc {
 }
 
 func main() {
-	log.Printf("Starting up...")
-
 	flag.StringVar(&addr, "addr", "", "aranet4 device address")
 	flag.StringVar(&authUser, "authuser", "", "username for basic auth")
 	flag.StringVar(&authPass, "authpass", "", "password for basic auth")
@@ -110,19 +123,10 @@ func main() {
 		return
 	}
 
-	log.Printf("Connecting...")
-
-	aranet4 = NewAranet4()
-	err := aranet4.Connect(addr)
-	if err != nil {
-		log.Fatalf("could not connect to device: %+v", err)
-	}
-
-	defer aranet4.Disconnect()
-
-	log.Printf("Connected")
-
 	http.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
+		mutex.Lock()
+		defer mutex.Unlock()
+
 		fmt.Fprintf(w, "OK\n")
 	})
 
@@ -135,7 +139,7 @@ func main() {
 
 	log.Printf("Listening on :8080")
 
-	err = http.ListenAndServe(":8080", nil)
+	err := http.ListenAndServe(":8080", nil)
 	if err != nil {
 		log.Fatalf("could not start http server: %+v", err)
 	}
