@@ -76,9 +76,12 @@ func handleMetrics(w http.ResponseWriter, r *http.Request) {
 
 	currentReading, err := aranet4.CurrentReading(true)
 	if err != nil {
+		log.Printf("could not read current reading: %+v", err)
 		emitError(w, "current_reading", err)
 		return
 	}
+
+	log.Println("Successful")
 
 	emitMetricSuccessfully(w, currentReading)
 }
